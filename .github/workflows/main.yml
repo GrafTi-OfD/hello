@@ -1,43 +1,58 @@
-name: C++ Build & Test
+name: C++ CI/CD
 
+permissions:
+  contents: write
+  
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y g++
+
+    - name: Build the application
+      run: g++ helloworld.cpp -o HelloWorld
+
+    - name: Run the application
+      run: ./HelloWorld
+
+    - name: Run tests
+      run: |
+        # Example test: check output contains "Hello"
+        output=$(./HelloWorld)
+        if [[ "$output" != *"Hello"* ]]; then
+          echo "Test failed: expected output to contain 'Hello'"
+          exit 1
+        fi
+    
+    - name: Package artifact
+      run: |
+        mkdir -p dist
+        cp HelloWorld dist/
+        cd dist && zip -r ../setup.zip .
+        ls -l ..  # debug
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: setup-zip
+        path: setup.zip
+        if-no-files-found: error
+        retention-days: 7
         
-      - name: Install build tools
-        run: sudo apt-get update && sudo apt-get install -y build-essential
-        
-      - name: Compile all C++ files
-        run: g++ *.cpp -o program
-
-      - name: Run program
-        run: ./program
-
-      - name: Package artifact
-        run: |
-          mkdir -p dist
-          cp HelloWorld dist/
-          cd dist && zip -r ../setup.zip .
-          ls -l ..  # debug
-      
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: setup-zip
-          path: setup.zip
-          if-no-files-found: error
-          retention-days: 7
-
   release:
     needs: build
     runs-on: ubuntu-latest
@@ -48,7 +63,7 @@ jobs:
         with:
           name: setup-zip
           path: dist
-          
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         env:
