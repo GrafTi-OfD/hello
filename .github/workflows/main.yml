@@ -1,0 +1,24 @@
+name: C++ Build & Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Install build tools
+        run: sudo aot-get update && sudo apt-get install -y build-essential
+        
+      - name: Compile all C++ files
+        run: g++ *.cpp -o program
+
+      - name: Run program
+        run: ./program    
